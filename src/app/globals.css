@@ -625,22 +625,21 @@ body::after {
 
 /* Enhanced Analytics Grid */
 .analytics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
-    gap: 2.5rem;
-    animation: fadeInUp 1s ease-out 0.6s both;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-top: 2rem;
 }
 
 .analytics-card {
-    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(30, 41, 59, 0.95) 100%);
-    backdrop-filter: blur(20px);
-    border: 2px solid var(--card-border);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
-    padding: 2.5rem;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 2rem;
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow-secondary);
+    transition: all 0.3s ease;
 }
 
 .analytics-card::before {
@@ -649,15 +648,20 @@ body::after {
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
-    background: var(--gradient-primary);
-    box-shadow: 0 0 15px var(--glow-blue);
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 172, 193, 0.1) 100%);
+    border-radius: 20px;
+    z-index: -1;
+    transition: all 0.3s ease;
 }
 
 .analytics-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 102, 255, 0.15);
-    border-color: rgba(0, 102, 255, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 102, 255, 0.2);
+}
+
+.analytics-card:hover::before {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.2) 0%, rgba(0, 172, 193, 0.2) 100%);
 }
 
 .card-header {

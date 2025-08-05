@@ -77,10 +77,6 @@ export default function AnalyticsGrid({ data, onRefresh }) {
               <span className="stat-value">Loading...</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Buy/Sell Distribution</span>
-              <span className="stat-value">Loading...</span>
-            </div>
-            <div className="stat-item">
               <span className="stat-label">Volume Growth Rate</span>
               <span className="stat-value">Loading...</span>
             </div>
@@ -126,10 +122,6 @@ export default function AnalyticsGrid({ data, onRefresh }) {
           <div className="stat-item">
             <span className="stat-label">Total Transactions</span>
             <span className="stat-value">{formatNumber(data.totalTransactions)}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Buy/Sell Distribution</span>
-            <span className="stat-value">{data.buyTransactions}/{data.sellTransactions}</span>
           </div>
           <div className="stat-item">
             <span className="stat-label">Volume Growth Rate</span>
