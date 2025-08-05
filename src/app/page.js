@@ -10,7 +10,8 @@ import CommunityCard from './components/CommunityCard'
 import NotificationContainer from './components/NotificationContainer'
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true)
+  const [showWelcome, setShowWelcome] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [dashboardData, setDashboardData] = useState(null)
   const [communityData, setCommunityData] = useState({
     twitterFollowers: 0,
@@ -20,20 +21,20 @@ export default function Home() {
   })
 
   useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 2500)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    if (!isLoading) {
+    if (!showWelcome && !isLoading) {
       fetchDashboardData()
       fetchCommunityData()
     }
-  }, [isLoading])
+  }, [showWelcome, isLoading])
+
+  const handleEnterApp = () => {
+    setIsLoading(true)
+    // The LoadingScreen component will handle the transition
+    setTimeout(() => {
+      setShowWelcome(false)
+      setIsLoading(false)
+    }, 1500)
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -65,8 +66,8 @@ export default function Home() {
     fetchCommunityData()
   }
 
-  if (isLoading) {
-    return <LoadingScreen />
+  if (showWelcome) {
+    return <LoadingScreen onEnterApp={handleEnterApp} />
   }
 
   return (
@@ -76,8 +77,8 @@ export default function Home() {
       <main className="dashboard-section">
         <div className="dashboard-container">
           <header className="dashboard-header">
-            <h1 className="dashboard-title">UrAnus Anal-ytics Dashboard</h1>
-            <p className="dashboard-subtitle">Advanced blockchain anal-ytics</p>
+            <h1 className="dashboard-title">UrAnus Analytics Dashboard</h1>
+            <p className="dashboard-subtitle">Advanced blockchain analytics</p>
           </header>
 
           <ContractAddress />

@@ -71,8 +71,69 @@ async function makeSolanaTrackerRequest(endpoint, retries = 3) {
     }
 }
 
+// Calculate real holder growth from historical data
+async function calculateHolderGrowth(tokenAddress) {
+    try {
+        console.log('📈 Calculating real holder growth...')
+        
+        // Get holder chart data
+        const holderChartData = await makeSolanaTrackerRequest(`/holders/chart/${tokenAddress}`)
+        
+        if (!holderChartData || !holderChartData.holders || !Array.isArray(holderChartData.holders)) {
+            console.log('⚠️ No valid holder chart data available, using mock growth')
+            return Math.floor(Math.random() * 50) + 10
+        }
+        
+        const holders = holderChartData.holders
+        
+        // Need at least 2 data points to calculate growth
+        if (holders.length < 2) {
+            console.log('⚠️ Insufficient holder data points, using mock growth')
+            return Math.floor(Math.random() * 50) + 10
+        }
+        
+        // Sort by timestamp to ensure chronological order
+        const sortedHolders = holders.sort((a, b) => a.time - b.time)
+        
+        // Get current holders (latest data point)
+        const currentHolders = parseInt(sortedHolders[sortedHolders.length - 1].holders) || 0
+        
+        // Get holders from 24 hours ago (or closest available data point)
+        const twentyFourHoursAgo = Math.floor(Date.now() / 1000) - (24 * 60 * 60)
+        
+        // Find the closest data point to 24 hours ago
+        let previousHolders = currentHolders
+        for (let i = sortedHolders.length - 1; i >= 0; i--) {
+            if (sortedHolders[i].time <= twentyFourHoursAgo) {
+                previousHolders = parseInt(sortedHolders[i].holders) || currentHolders
+                break
+            }
+        }
+        
+        // If we don't have 24h old data, use the earliest available data point
+        if (previousHolders === currentHolders && sortedHolders.length > 1) {
+            previousHolders = parseInt(sortedHolders[0].holders) || currentHolders
+        }
+        
+        if (previousHolders === 0) {
+            console.log('⚠️ No previous holder data available, using mock growth')
+            return Math.floor(Math.random() * 50) + 10
+        }
+        
+        const growthPercentage = ((currentHolders - previousHolders) / previousHolders) * 100
+        console.log(`✅ Calculated holder growth: ${growthPercentage.toFixed(2)}% (${previousHolders} → ${currentHolders})`)
+        
+        return Math.max(growthPercentage, -100) // Cap at -100% to avoid unrealistic negative growth
+        
+    } catch (error) {
+        console.error('❌ Error calculating holder growth:', error.message)
+        console.log('⚠️ Falling back to mock holder growth')
+        return Math.floor(Math.random() * 50) + 10
+    }
+}
+
 // Process dashboard data from token API response
-function processDashboardData(tokenData) {
+function processDashboardData(tokenData, topHoldersData, holderGrowth) {
     console.log('🔄 Processing dashboard data...')
     
     // Extract token information
@@ -98,11 +159,11 @@ function processDashboardData(tokenData) {
     // Extract holder information
     const totalHolders = tokenData.holders || 0
     
-    // Generate mock top holders since we don't have the holders endpoint working
-    const processedTopHolders = generateMockTopHolders()
+    // Process real top holders data or fallback to mock data
+    const processedTopHolders = processTopHoldersData(topHoldersData)
     
-    // Calculate growth rates (mock for now, could be enhanced with historical data)
-    const holdersGrowth = Math.floor(Math.random() * 50) + 10
+    // Use real holder growth or fallback to mock
+    const holdersGrowth = holderGrowth || Math.floor(Math.random() * 50) + 10
     const volumeGrowth = Math.floor(Math.random() * 100) + 20
     
     return {
@@ -148,6 +209,33 @@ function processDashboardData(tokenData) {
     }
 }
 
+// Process real top holders data from Solana Tracker API
+function processTopHoldersData(topHoldersData) {
+    console.log('🔄 Processing top holders data...')
+    
+    if (!topHoldersData || !Array.isArray(topHoldersData)) {
+        console.log('⚠️ No valid top holders data, using mock data')
+        return generateMockTopHolders()
+    }
+    
+    // Take top 10 holders and format them
+    const top10Holders = topHoldersData.slice(0, 10).map((holder, index) => {
+        const balance = holder.balance || holder.amount || 0
+        const percentage = holder.percentage || holder.percentageOfSupply || 0
+        
+        return {
+            rank: index + 1,
+            wallet: holder.wallet || holder.address || holder.owner || '',
+            balance: balance,
+            balanceFormatted: balance.toLocaleString(),
+            percentage: typeof percentage === 'number' ? percentage.toFixed(2) : percentage
+        }
+    })
+    
+    console.log(`✅ Processed ${top10Holders.length} top holders`)
+    return top10Holders
+}
+
 // Generate mock top holders
 function generateMockTopHolders() {
     const wallets = [
@@ -174,8 +262,23 @@ export async function GET() {
         // Get token information and basic data first
         const tokenData = await makeSolanaTrackerRequest(`/tokens/${CONTRACT_ADDRESS}`)
         
-        // Process and combine all data - we'll get price and market data from the token endpoint
-        const dashboardData = processDashboardData(tokenData)
+        // Get top holders data
+        let topHoldersData = null
+        try {
+            console.log('👥 Fetching top holders data...')
+            topHoldersData = await makeSolanaTrackerRequest(`/tokens/${CONTRACT_ADDRESS}/holders/top`)
+            console.log('✅ Successfully fetched top holders data')
+        } catch (holdersError) {
+            console.error('❌ Error fetching top holders data:', holdersError.message)
+            console.log('⚠️ Falling back to mock top holders data')
+            topHoldersData = null
+        }
+        
+        // Calculate real holder growth
+        const holderGrowth = await calculateHolderGrowth(CONTRACT_ADDRESS)
+        
+        // Process and combine all data
+        const dashboardData = processDashboardData(tokenData, topHoldersData, holderGrowth)
         
         console.log('✅ Dashboard data processed successfully')
         return NextResponse.json(dashboardData)
@@ -202,15 +305,7 @@ export async function GET() {
             totalHolders: 1250,
             holdersGrowth: 15,
             volumeGrowth: 25,
-            topWallets: [
-                {
-                    rank: 1,
-                    wallet: 'BFgdzMkTPdKKJeTipv2njtDEwhKxkgFueJQfJGt1jups',
-                    balance: 1000000,
-                    balanceFormatted: '1,000,000',
-                    percentage: '10.00'
-                }
-            ],
+            topWallets: generateMockTopHolders(),
             liquidity: 50000.00,
             riskScore: 25,
             jupiterVerified: true,
